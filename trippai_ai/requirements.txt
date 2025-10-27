@@ -1,0 +1,10 @@
+pandas
+numpy
+requests
+pytrends
+scipy
+python-dotenv
+prophet
+fastapi
+uvicorn
+pydantic
