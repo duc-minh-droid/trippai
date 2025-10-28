@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PriceBreakdown } from "./PriceBreakdown"
 import { Progress } from "@/components/ui/progress"
-import { savedTripsStorage } from "../../lib/saved-trips"
+import { savedTripsStorage } from "@/lib/saved-trips"
 import { toast } from "sonner"
 import type { MultiCityTripResult, ItineraryStop } from "@/lib/multi-city-types"
 
