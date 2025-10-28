@@ -6,9 +6,10 @@ from typing import List, Dict, Optional, Tuple
 import logging
 from itertools import permutations
 
-from travel_model import TripTimeAI
-from booking_service import BookingService
-from config import CITY_COORDINATES
+from models.trip_time_ai import TripTimeAI
+from services.booking_service import BookingService
+from config import CITY_COORDINATES, EVENTBRITE_API_KEY
+from services.event_service import EventService
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,8 @@ class MultiCityPlanner:
         total_days: int,
         start_date: Optional[datetime] = None,
         optimize_route: bool = True,
-        forecast_weeks: int = 52
+        forecast_weeks: int = 52,
+        max_budget: Optional[float] = None
     ) -> Dict:
         """
         Plan a multi-city trip with optimal routing and timing.
@@ -102,11 +104,14 @@ class MultiCityPlanner:
             start_date: Preferred start date (None = find optimal)
             optimize_route: Whether to optimize city order
             forecast_weeks: Number of weeks to forecast for date optimization
+            max_budget: Maximum budget constraint (optional)
         
         Returns:
             Dictionary with complete trip plan including route, dates, and costs
         """
         logger.info(f"Planning multi-city trip: {[c.city for c in cities]}")
+        if max_budget:
+            logger.info(f"Budget constraint: ${max_budget:.2f}")
         
         # Validate inputs
         min_total_days = sum(c.min_days for c in cities)
@@ -128,7 +133,7 @@ class MultiCityPlanner:
         # Find optimal start date if not provided
         if start_date is None:
             start_date = self._find_optimal_start_date(
-                cities, day_allocation, forecast_weeks
+                cities, day_allocation, forecast_weeks, max_budget
             )
             logger.info(f"Optimal start date: {start_date.date()}")
         
@@ -140,6 +145,13 @@ class MultiCityPlanner:
         # Calculate costs
         cost_breakdown = self._calculate_trip_costs(itinerary)
         
+        # Check if total cost exceeds budget
+        if max_budget and cost_breakdown["grand_total"] > max_budget:
+            raise ValueError(
+                f"No itinerary found within budget of ${max_budget:.2f}. "
+                f"Minimum predicted cost: ${cost_breakdown['grand_total']:.2f}"
+            )
+        
         # Calculate overall trip score
         overall_score = self._calculate_overall_score(itinerary)
         
@@ -148,6 +160,12 @@ class MultiCityPlanner:
             itinerary, cost_breakdown, overall_score
         )
         
+        # Calculate total distance
+        total_distance = self._calculate_total_distance(itinerary)
+        
+        # Get route details
+        route_info = self._get_route_info(cities, optimize_route)
+        
         return {
             "origin_city": self.origin_city,
             "cities": [c.city for c in cities],
@@ -155,10 +173,18 @@ class MultiCityPlanner:
             "start_date": start_date.strftime("%Y-%m-%d"),
             "end_date": (start_date + timedelta(days=total_days)).strftime("%Y-%m-%d"),
             "route_optimized": optimize_route,
+            "route_info": route_info,
+            "total_distance_km": round(total_distance, 1),
             "itinerary": itinerary,
             "cost_breakdown": cost_breakdown,
             "overall_score": overall_score,
             "summary": summary,
+            "metadata": {
+                "forecast_weeks": forecast_weeks,
+                "optimization_enabled": optimize_route,
+                "number_of_cities": len(cities),
+                "generated_at": datetime.now().isoformat()
+            },
             "generated_at": datetime.now().isoformat()
         }
     
@@ -290,14 +316,23 @@ class MultiCityPlanner:
         self,
         cities: List[CityStop],
         day_allocation: Dict[str, int],
-        forecast_weeks: int
+        forecast_weeks: int,
+        max_budget: Optional[float] = None
     ) -> datetime:
         """
         Find the optimal start date for the multi-city trip.
         
         Uses AI predictions for each city and finds the best overall timing.
+        If max_budget is provided, attempts to find dates within budget.
         """
         logger.info("Finding optimal start date...")
+        
+        # Calculate per-city budget if total budget provided
+        per_city_budget = None
+        if max_budget and len(cities) > 0:
+            # Rough estimate: divide by number of cities plus some buffer for flights
+            per_city_budget = max_budget / (len(cities) * 1.3)
+            logger.info(f"Per-city budget estimate: ${per_city_budget:.2f}")
         
         # Get predictions for each city
         city_predictions = {}
@@ -307,11 +342,25 @@ class MultiCityPlanner:
                 result = model.predict_best_time(
                     trip_days=day_allocation[city.city],
                     forecast_weeks=forecast_weeks,
+                    max_budget=per_city_budget,
                     save_output=False
                 )
                 city_predictions[city.city] = result
             except Exception as e:
                 logger.warning(f"Failed to get predictions for {city.city}: {e}")
+                # If budget filtering failed, try without budget for this city
+                if max_budget and "budget" in str(e).lower():
+                    try:
+                        model = TripTimeAI(city.city, lat=city.lat, lon=city.lon)
+                        result = model.predict_best_time(
+                            trip_days=day_allocation[city.city],
+                            forecast_weeks=forecast_weeks,
+                            max_budget=None,
+                            save_output=False
+                        )
+                        city_predictions[city.city] = result
+                    except Exception as e2:
+                        logger.warning(f"Failed again for {city.city}: {e2}")
         
         # If we got predictions, use the best scored city as anchor
         if city_predictions:
@@ -340,6 +389,9 @@ class MultiCityPlanner:
         current_date = start_date
         previous_city = self.origin_city
         
+        # Initialize event service
+        event_service = EventService(api_key=EVENTBRITE_API_KEY)
+        
         for i, city in enumerate(cities):
             days_in_city = day_allocation[city.city]
             city_start = current_date
@@ -354,6 +406,15 @@ class MultiCityPlanner:
                     save_output=False
                 )
                 
+                # Fetch events for this city during the stay
+                event_data = event_service.get_events_for_trip(
+                    city=city.city,
+                    start_date=city_start.strftime("%Y-%m-%d"),
+                    end_date=city_end.strftime("%Y-%m-%d"),
+                    lat=city.lat,
+                    lon=city.lon
+                )
+                
                 city_info = {
                     "city": city.city,
                     "order": i + 1,
@@ -366,9 +427,22 @@ class MultiCityPlanner:
                         "precipitation": prediction.get("predicted_precipitation")
                     },
                     "predicted_price": prediction.get("predicted_price"),
+                    "predicted_crowd": prediction.get("predicted_crowd"),
                     "travel_score": prediction.get("travel_score"),
-                    "from_city": previous_city
+                    "confidence": prediction.get("confidence"),
+                    "scores": prediction.get("scores", {}),
+                    "ai_explanation": prediction.get("ai_explanation"),
+                    "ai_travel_tip": prediction.get("ai_travel_tip"),
+                    "from_city": previous_city,
+                    "events": event_data.get("events", []),
+                    "event_warning": event_data.get("warning"),
+                    "event_suggestions": event_data.get("suggestions", []),
+                    "has_major_events": event_data.get("has_major_events", False)
                 }
+                
+                if event_data.get("has_major_events"):
+                    logger.info(f"Found {len(event_data['events'])} events in {city.city}")
+                    
             except Exception as e:
                 logger.warning(f"Could not get predictions for {city.city}: {e}")
                 city_info = {
@@ -379,6 +453,9 @@ class MultiCityPlanner:
                     "days": days_in_city,
                     "coordinates": {"lat": city.lat, "lon": city.lon},
                     "from_city": previous_city,
+                    "events": [],
+                    "event_suggestions": [],
+                    "has_major_events": False,
                     "error": str(e)
                 }
             
@@ -395,6 +472,7 @@ class MultiCityPlanner:
         total_hotel = 0.0
         total_flights = 0.0
         city_costs = {}
+        detailed_flights = []
         
         for i, stop in enumerate(itinerary):
             city = stop["city"]
@@ -416,6 +494,14 @@ class MultiCityPlanner:
                 # Rough estimate: $0.15 per km for flights
                 flight_cost = distance * 0.15
                 total_flights += flight_cost
+                
+                flight_detail = {
+                    "from": prev_stop['city'],
+                    "to": city,
+                    "distance_km": round(distance, 1),
+                    "cost": round(flight_cost, 2)
+                }
+                detailed_flights.append(flight_detail)
                 city_costs[f"Flight {prev_stop['city']} → {city}"] = round(flight_cost, 2)
             
             city_costs[f"{city} accommodation"] = round(hotel_cost, 2)
@@ -432,6 +518,14 @@ class MultiCityPlanner:
             )
             return_flight_cost = distance * 0.15
             total_flights += return_flight_cost
+            
+            flight_detail = {
+                "from": last_stop['city'],
+                "to": self.origin_city,
+                "distance_km": round(distance, 1),
+                "cost": round(return_flight_cost, 2)
+            }
+            detailed_flights.append(flight_detail)
             city_costs[f"Flight {last_stop['city']} → {self.origin_city}"] = round(return_flight_cost, 2)
         
         return {
@@ -439,7 +533,8 @@ class MultiCityPlanner:
             "total_flights": round(total_flights, 2),
             "total_cost": round(total_hotel + total_flights, 2),
             "per_person": round((total_hotel + total_flights) / 2, 2),  # Assume 2 people
-            "breakdown": city_costs
+            "breakdown": city_costs,
+            "flights": detailed_flights
         }
     
     def _lookup_origin_coords(self) -> Dict[str, float]:
@@ -495,3 +590,63 @@ class MultiCityPlanner:
         summary += f"(${cost_breakdown['per_person']:,.2f} per person)"
         
         return summary
+    
+    def _calculate_total_distance(self, itinerary: List[Dict]) -> float:
+        """Calculate total distance traveled including return to origin."""
+        if not itinerary:
+            return 0.0
+        
+        total = 0.0
+        origin_coords = self._lookup_origin_coords()
+        
+        # Distance from origin to first city
+        first_stop = itinerary[0]
+        total += self._calculate_distance(
+            origin_coords["lat"], origin_coords["lon"],
+            first_stop["coordinates"]["lat"], first_stop["coordinates"]["lon"]
+        )
+        
+        # Distance between cities
+        for i in range(len(itinerary) - 1):
+            curr = itinerary[i]
+            next_stop = itinerary[i + 1]
+            total += self._calculate_distance(
+                curr["coordinates"]["lat"], curr["coordinates"]["lon"],
+                next_stop["coordinates"]["lat"], next_stop["coordinates"]["lon"]
+            )
+        
+        # Distance from last city back to origin
+        last_stop = itinerary[-1]
+        total += self._calculate_distance(
+            last_stop["coordinates"]["lat"], last_stop["coordinates"]["lon"],
+            origin_coords["lat"], origin_coords["lon"]
+        )
+        
+        return total
+    
+    def _get_route_info(self, cities: List[CityStop], optimized: bool) -> Dict:
+        """Get detailed route information."""
+        route_order = [c.city for c in cities]
+        
+        info = {
+            "order": route_order,
+            "was_optimized": optimized,
+            "optimization_method": "greedy_nearest_neighbor" if optimized and len(cities) > 6 else "exhaustive" if optimized else "manual"
+        }
+        
+        if optimized and len(cities) > 1:
+            # Calculate distances between consecutive cities
+            segments = []
+            for i in range(len(cities) - 1):
+                distance = self._calculate_distance(
+                    cities[i].lat, cities[i].lon,
+                    cities[i + 1].lat, cities[i + 1].lon
+                )
+                segments.append({
+                    "from": cities[i].city,
+                    "to": cities[i + 1].city,
+                    "distance_km": round(distance, 1)
+                })
+            info["segments"] = segments
+        
+        return info

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { User, Code2 } from "lucide-react"
+import { Code2 } from "lucide-react"
 import * as React from "react"
 import { useTheme } from "next-themes"
 import { Expand } from "@theme-toggles/react"
@@ -126,25 +126,17 @@ export function MobileSidebar({ navItems, pathname, onClose }: MobileSidebarProp
         </nav>
 
         <div className="absolute left-4 right-4 bottom-6">
-            <div className="rounded-xl bg-secondary/20 border border-border/30 p-4">
-            {/* @@MOBILE_AUTH_BUTTON@@ */}
-            </div>
-
           <div className="rounded-xl bg-secondary/20 border border-border/30 p-4">
             <div className="flex items-center justify-between">
-              <Link
-                href="/user"
-                onClick={onClose}
-                className="flex items-center gap-3 hover:text-primary transition-colors"
-              >
+              <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
-                  <User className="h-5 w-5 text-primary" />
+                  <Code2 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <span className="text-sm font-medium">Profile</span>
-                  <p className="text-xs text-muted-foreground">View account</p>
+                  <span className="text-sm font-medium">Theme</span>
+                  <p className="text-xs text-muted-foreground">Toggle appearance</p>
                 </div>
-              </Link>
+              </div>
 
               <div>
                 {/* @ts-expect-error - @theme-toggles/react has incomplete type definitions */}

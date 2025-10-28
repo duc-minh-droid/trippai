@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
-import Map, { NavigationControl, GeolocateControl, MapRef } from "react-map-gl/mapbox"
+import Map, { NavigationControl, GeolocateControl, MapRef, Source, Layer, Marker } from "react-map-gl/mapbox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -12,7 +12,7 @@ import { PredictionLoadingCard } from "@/components/home/PredictionLoadingCard"
 import { MultiCityResult } from "@/components/multi-city/MultiCityResult"
 import { CityStopInput, CityStopData } from "@/components/multi-city/CityStopInput"
 import { cities } from "@/lib/cities"
-import { Plus, MapPin, Route } from "lucide-react"
+import { Plus, MapPin, Route, ChevronDown, ChevronUp, Settings, Plane } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import "mapbox-gl/dist/mapbox-gl.css"
 
@@ -36,12 +36,16 @@ export default function Home() {
   
   // Common states
   const [forecastWeeks, setForecastWeeks] = useState(52)
+  const [maxBudget, setMaxBudget] = useState<string>("")
   const useRealPrices = true // Always use real-time prices
-  const [originCity, setOriginCity] = useState("London")
+  const [originCity, setOriginCity] = useState("london")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [isNewResult, setIsNewResult] = useState(true)
+
+  // Input form collapse state
+  const [isFormCollapsed, setIsFormCollapsed] = useState(false)
 
   // Map state
   const [viewState, setViewState] = useState({
@@ -55,6 +59,12 @@ export default function Home() {
     value: city.name.toLowerCase(),
     label: `${city.name}, ${city.country}`,
   }))
+
+  // Helper to get the proper city name (capitalized) from lowercase value
+  const getCityName = (value: string): string => {
+    const city = cities.find(c => c.name.toLowerCase() === value.toLowerCase())
+    return city ? city.name : value
+  }
 
   const animateToCity = useCallback((cityName: string) => {
     const selectedCity = cities.find(
@@ -71,11 +81,108 @@ export default function Home() {
     }
   }, [])
 
+  // Animate map to show route between origin and destination
+  const animateToRoute = useCallback((originCityName: string, destCityName: string) => {
+    const origin = cities.find(
+      (city) => city.name.toLowerCase() === originCityName.toLowerCase()
+    )
+    const destination = cities.find(
+      (city) => city.name.toLowerCase() === destCityName.toLowerCase()
+    )
+
+    if (origin && destination && mapRef.current) {
+      // Calculate bounds that include both cities
+      const minLng = Math.min(origin.longitude, destination.longitude)
+      const maxLng = Math.max(origin.longitude, destination.longitude)
+      const minLat = Math.min(origin.latitude, destination.latitude)
+      const maxLat = Math.max(origin.latitude, destination.latitude)
+
+      // Add padding to the bounds
+      mapRef.current.fitBounds(
+        [
+          [minLng, minLat],
+          [maxLng, maxLat]
+        ],
+        {
+          padding: 100,
+          duration: 2000,
+          essential: true
+        }
+      )
+    }
+  }, [])
+
+  // Animate map to show all multi-city stops
+  const animateToMultiCityRoute = useCallback((cityNames: string[]) => {
+    if (!cityNames || cityNames.length === 0) return
+
+    const validCities = cityNames
+      .map(name => cities.find(city => city.name.toLowerCase() === name.toLowerCase()))
+      .filter(Boolean) as typeof cities
+
+    if (validCities.length === 0 || !mapRef.current) return
+
+    // Calculate bounds that include all cities
+    const lngs = validCities.map(c => c.longitude)
+    const lats = validCities.map(c => c.latitude)
+    
+    const minLng = Math.min(...lngs)
+    const maxLng = Math.max(...lngs)
+    const minLat = Math.min(...lats)
+    const maxLat = Math.max(...lats)
+
+    mapRef.current.fitBounds(
+      [
+        [minLng, minLat],
+        [maxLng, maxLat]
+      ],
+      {
+        padding: 100,
+        duration: 2000,
+        essential: true
+      }
+    )
+  }, [])
+
   const handleCityChange = (value: string) => {
     setDestination(value)
     // Animate map to selected city when chosen from dropdown
     animateToCity(value)
   }
+
+  const handleOriginChange = (value: string) => {
+    setOriginCity(value)
+    // Animate map to selected city when chosen from dropdown
+    animateToCity(value)
+  }
+
+  // Animate map when single trip result is available
+  useEffect(() => {
+    if (result && !isMultiCity && result.destination && result.origin_city) {
+      animateToRoute(result.origin_city, result.destination)
+    }
+  }, [result, isMultiCity, animateToRoute])
+
+  // Show route when both origin and destination are selected (even without result)
+  useEffect(() => {
+    if (!isMultiCity && originCity && destination) {
+      animateToRoute(originCity, destination)
+    }
+  }, [originCity, destination, isMultiCity, animateToRoute])
+
+  // Animate map for multi-city stops
+  useEffect(() => {
+    if (isMultiCity) {
+      const selectedCities = cityStops
+        .map(stop => stop.city)
+        .filter(city => city) // Filter out empty strings
+      
+      if (selectedCities.length > 0) {
+        // Include origin in the route
+        animateToMultiCityRoute([originCity, ...selectedCities])
+      }
+    }
+  }, [isMultiCity, cityStops, originCity, animateToMultiCityRoute])
 
   // Multi-city functions
   const addCityStop = () => {
@@ -106,6 +213,7 @@ export default function Home() {
     setError(null)
     setResult(null)
     setIsNewResult(true)
+    setIsFormCollapsed(true) // Collapse form after submission
 
     try {
       if (isMultiCity) {
@@ -123,11 +231,12 @@ export default function Home() {
               preferred_days: stop.preferred_days,
             })),
             total_days: totalDays,
-            origin_city: originCity,
+            origin_city: getCityName(originCity),
             start_date: null,
             optimize_route: optimizeRoute,
             forecast_weeks: forecastWeeks,
             use_real_prices: useRealPrices,
+            max_budget: maxBudget ? parseFloat(maxBudget) : null,
           }),
         })
 
@@ -137,11 +246,11 @@ export default function Home() {
         }
 
         const data = await response.json()
+        console.log("API Response received:", data)
+        console.log("AI Travel Tip in response:", data.ai_travel_tip)
         setResult(data)
       } else {
         // Single city API call
-        animateToCity(destination)
-        
         const response = await fetch("http://localhost:8000/api/predict", {
           method: "POST",
           headers: {
@@ -152,7 +261,8 @@ export default function Home() {
             trip_days: tripDays,
             forecast_weeks: forecastWeeks,
             use_real_prices: useRealPrices,
-            origin_city: originCity,
+            origin_city: getCityName(originCity),
+            max_budget: maxBudget ? parseFloat(maxBudget) : null,
           }),
         })
 
@@ -161,6 +271,8 @@ export default function Home() {
         }
 
         const data = await response.json()
+        console.log("Single City API Response:", data)
+        console.log("Has ai_travel_tip?", !!data.ai_travel_tip)
         setResult(data)
       }
     } catch (err) {
@@ -176,17 +288,234 @@ export default function Home() {
       <Map
         ref={mapRef}
         {...viewState}
-        onMove={(evt: any) => setViewState(evt.viewState)}
+        onMove={(evt) => setViewState(evt.viewState)}
         style={{ width: "100%", height: "100%" }}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw"}
       >
-        <NavigationControl position="bottom-left" />
-        <GeolocateControl position="bottom-left" />
+        <NavigationControl position="bottom-right" />
+        <GeolocateControl position="bottom-right" />
+
+        {/* Route line and markers - always show when both cities are selected */}
+        {!isMultiCity && originCity && destination && (() => {
+          const origin = cities.find(
+            (city) => city.name.toLowerCase() === originCity.toLowerCase()
+          )
+          const dest = cities.find(
+            (city) => city.name.toLowerCase() === destination.toLowerCase()
+          )
+
+          if (!origin || !dest) return null
+
+          // Create GeoJSON for the route line
+          const routeGeoJSON = {
+            type: "Feature" as const,
+            properties: {},
+            geometry: {
+              type: "LineString" as const,
+              coordinates: [
+                [origin.longitude, origin.latitude],
+                [dest.longitude, dest.latitude]
+              ]
+            }
+          }
+
+          return (
+            <>
+              {/* Dotted route line */}
+              <Source id="route" type="geojson" data={routeGeoJSON}>
+                <Layer
+                  id="route-line"
+                  type="line"
+                  paint={{
+                    "line-color": "#3b82f6",
+                    "line-width": 4,
+                    "line-opacity": 0.8,
+                    "line-dasharray": [2, 2]
+                  }}
+                />
+              </Source>
+
+              {/* Origin marker */}
+              <Marker
+                longitude={origin.longitude}
+                latitude={origin.latitude}
+                anchor="bottom"
+              >
+                <div className="flex flex-col items-center animate-bounce-slow">
+                  <div className="bg-green-500 text-white p-3 rounded-full shadow-lg">
+                    <MapPin className="w-6 h-6" />
+                  </div>
+                  <div className="mt-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-3 py-1 rounded text-sm font-semibold shadow-lg">
+                    {origin.name}
+                  </div>
+                </div>
+              </Marker>
+
+              {/* Destination marker */}
+              <Marker
+                longitude={dest.longitude}
+                latitude={dest.latitude}
+                anchor="bottom"
+              >
+                <div className="flex flex-col items-center animate-bounce-slow">
+                  <div className="bg-blue-500 text-white p-3 rounded-full shadow-lg">
+                    <Plane className="w-6 h-6" />
+                  </div>
+                  <div className="mt-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-3 py-1 rounded text-sm font-semibold shadow-lg">
+                    {dest.name}
+                  </div>
+                </div>
+              </Marker>
+            </>
+          )
+        })()}
+
+        {/* Multi-city routes and markers */}
+        {isMultiCity && (() => {
+          // Get all valid city stops
+          const validStops = cityStops
+            .map(stop => {
+              const city = cities.find(c => c.name.toLowerCase() === stop.city.toLowerCase())
+              return city ? { ...stop, cityData: city } : null
+            })
+            .filter(Boolean) as (CityStopData & { cityData: typeof cities[0] })[]
+
+          if (validStops.length === 0) return null
+
+          // Get origin city
+          const origin = cities.find(c => c.name.toLowerCase() === originCity.toLowerCase())
+          if (!origin) return null
+
+          // Create route: origin -> all stops
+          const allCities = [origin, ...validStops.map(s => s.cityData)]
+
+          // Create individual route segments
+          const routeSegments = []
+          for (let i = 0; i < allCities.length - 1; i++) {
+            const from = allCities[i]
+            const to = allCities[i + 1]
+            
+            routeSegments.push({
+              id: `route-${i}`,
+              coordinates: [
+                [from.longitude, from.latitude],
+                [to.longitude, to.latitude]
+              ]
+            })
+          }
+
+          // Color palette for markers
+          const colors = [
+            'bg-green-500',   // Origin
+            'bg-blue-500',    // Stop 1
+            'bg-purple-500',  // Stop 2
+            'bg-pink-500',    // Stop 3
+            'bg-orange-500',  // Stop 4
+            'bg-red-500',     // Stop 5
+            'bg-yellow-500',  // Stop 6
+          ]
+
+          return (
+            <>
+              {/* Render all route segments */}
+              {routeSegments.map((segment, idx) => {
+                const routeGeoJSON = {
+                  type: "Feature" as const,
+                  properties: {},
+                  geometry: {
+                    type: "LineString" as const,
+                    coordinates: segment.coordinates
+                  }
+                }
+
+                return (
+                  <Source key={segment.id} id={segment.id} type="geojson" data={routeGeoJSON}>
+                    <Layer
+                      id={`${segment.id}-line`}
+                      type="line"
+                      paint={{
+                        "line-color": "#3b82f6",
+                        "line-width": 4,
+                        "line-opacity": 0.8,
+                        "line-dasharray": [2, 2]
+                      }}
+                    />
+                  </Source>
+                )
+              })}
+
+              {/* Origin marker */}
+              <Marker
+                longitude={origin.longitude}
+                latitude={origin.latitude}
+                anchor="bottom"
+              >
+                <div className="flex flex-col items-center animate-bounce-slow">
+                  <div className={`${colors[0]} text-white p-3 rounded-full shadow-lg`}>
+                    <MapPin className="w-6 h-6" />
+                  </div>
+                  <div className="mt-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-3 py-1 rounded text-sm font-semibold shadow-lg">
+                    {origin.name}
+                  </div>
+                </div>
+              </Marker>
+
+              {/* Stop markers */}
+              {validStops.map((stop, idx) => (
+                <Marker
+                  key={stop.id}
+                  longitude={stop.cityData.longitude}
+                  latitude={stop.cityData.latitude}
+                  anchor="bottom"
+                >
+                  <div className="flex flex-col items-center animate-bounce-slow">
+                    <div className={`${colors[(idx + 1) % colors.length]} text-white p-3 rounded-full shadow-lg relative`}>
+                      <Plane className="w-6 h-6" />
+                      <div className="absolute -top-1 -right-1 bg-white text-black rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                        {idx + 1}
+                      </div>
+                    </div>
+                    <div className="mt-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-3 py-1 rounded text-sm font-semibold shadow-lg">
+                      {stop.cityData.name}
+                    </div>
+                  </div>
+                </Marker>
+              ))}
+            </>
+          )
+        })()}
       </Map>
 
       {/* Compact input form - top right corner */}
-      <Card className="absolute top-4 right-4 w-80 p-4 shadow-lg bg-background/95 backdrop-blur-sm z-10 max-h-[calc(100vh-2rem)] overflow-y-auto">
+      <Card className="absolute top-4 right-4 w-80 shadow-2xl bg-background/80 backdrop-blur-xl border border-border/50 z-10 overflow-hidden">
+        {/* Collapsible Header */}
+        <div className="flex items-center justify-between p-3 border-b bg-background/50">
+          <div className="flex items-center gap-2">
+            <Settings className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold">Trip Settings</h3>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsFormCollapsed(!isFormCollapsed)}
+            className="h-8 w-8 p-0"
+          >
+            {isFormCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </Button>
+        </div>
+
+        {/* Collapsible Content */}
+        <AnimatePresence>
+          {!isFormCollapsed && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="p-4 max-h-[calc(100vh-10rem)] overflow-y-auto scrollbar-hide">
         {/* Mode Toggle */}
         <div className="flex gap-2 mb-4 p-1 bg-muted rounded-lg">
           <Button
@@ -224,14 +553,14 @@ export default function Home() {
             <label htmlFor="originCity" className="text-xs font-medium text-foreground">
               Origin City
             </label>
-            <Input
-              id="originCity"
-              type="text"
+            <Combobox
+              options={cityOptions}
               value={originCity}
-              onChange={(e) => setOriginCity(e.target.value)}
-              placeholder="Origin city"
+              onChange={handleOriginChange}
+              placeholder="Select origin city..."
+              searchPlaceholder="Search cities..."
+              emptyText="No city found."
               className="h-9 text-sm"
-              required
             />
           </div>
 
@@ -342,6 +671,22 @@ export default function Home() {
             />
           </div>
 
+          <div className="space-y-1">
+            <label htmlFor="maxBudget" className="text-xs font-medium text-foreground">
+              Max Budget (Optional)
+            </label>
+            <Input
+              id="maxBudget"
+              type="number"
+              value={maxBudget}
+              onChange={(e) => setMaxBudget(e.target.value)}
+              placeholder="e.g., 2000"
+              className="h-9 text-sm"
+              min="0"
+            />
+            <p className="text-[10px] text-muted-foreground">Leave empty for no budget limit</p>
+          </div>
+
           <Button 
             type="submit" 
             disabled={loading || (isMultiCity && (cityStops.length < 2 || cityStops.some((s) => !s.city)))} 
@@ -356,18 +701,22 @@ export default function Home() {
             {error}
           </div>
         )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Card>
 
       {/* Loading state - bottom left corner */}
       {loading && (
-        <div className="absolute bottom-4 left-4 max-h-[calc(100vh-6rem)] overflow-auto z-10">
+        <div className="fixed bottom-4 left-4 z-10 max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide">
           <PredictionLoadingCard />
         </div>
       )}
 
       {/* Results panel - bottom left corner */}
       {result && !loading && (
-        <div className="absolute bottom-4 left-4 max-h-[calc(100vh-6rem)] overflow-auto z-10">
+        <div className="fixed bottom-4 left-4 z-10 max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide">
           {isMultiCity ? (
             <MultiCityResult result={result} />
           ) : (

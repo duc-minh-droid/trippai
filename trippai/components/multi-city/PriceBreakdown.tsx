@@ -42,18 +42,18 @@ export function PriceBreakdown({
   ]
 
   return (
-    <Card className={`p-4 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold flex items-center gap-2">
-          <DollarSign className="w-4 h-4" />
+    <div className={`p-3 rounded-lg bg-muted/30 border ${className}`}>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-semibold flex items-center gap-1.5">
+          <DollarSign className="w-3 h-3" />
           Price Breakdown
         </h3>
-        <Badge variant={isRealData ? "default" : "secondary"} className="text-xs">
-          {isRealData ? "Real-Time Prices" : "Estimated"}
+        <Badge variant={isRealData ? "default" : "secondary"} className="text-[10px] h-4">
+          {isRealData ? "Real-Time" : "Est."}
         </Badge>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {items.map((item, index) => (
           item.value !== undefined && (
             <motion.div
@@ -63,17 +63,17 @@ export function PriceBreakdown({
               transition={{ duration: 0.3, delay: index * 0.1 }}
               className="flex items-center justify-between"
             >
-              <div className="flex items-center gap-2">
-                <div className={`p-2 rounded-lg ${item.bgColor}`}>
-                  <item.icon className={`w-4 h-4 ${item.color}`} />
+              <div className="flex items-center gap-1.5">
+                <div className={`p-1 rounded ${item.bgColor}`}>
+                  <item.icon className={`w-3 h-3 ${item.color}`} />
                 </div>
-                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-xs font-medium">{item.label}</span>
               </div>
               <motion.span
                 key={item.value}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-sm font-semibold"
+                className="text-xs font-semibold"
               >
                 ${item.value.toFixed(2)}
               </motion.span>
@@ -81,19 +81,19 @@ export function PriceBreakdown({
           )
         ))}
 
-        <div className="border-t pt-3 mt-3">
+        <div className="border-t pt-2 mt-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
-                <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <div className="flex items-center gap-1.5">
+              <div className="p-1 rounded bg-green-50 dark:bg-green-950/20">
+                <TrendingUp className="w-3 h-3 text-green-600 dark:text-green-400" />
               </div>
-              <span className="font-semibold">Total Cost</span>
+              <span className="text-xs font-semibold">Total</span>
             </div>
             <motion.span
               key={totalCost}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-lg font-bold text-primary"
+              className="text-sm font-bold text-primary"
             >
               ${totalCost.toFixed(2)}
             </motion.span>
@@ -103,13 +103,13 @@ export function PriceBreakdown({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="text-xs text-muted-foreground mt-2 text-right"
+              className="text-[10px] text-muted-foreground mt-1 text-right"
             >
               ${perPersonCost.toFixed(2)} per person
             </motion.p>
           )}
         </div>
       </div>
-    </Card>
+    </div>
   )
 }

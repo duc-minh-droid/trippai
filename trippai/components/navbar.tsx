@@ -2,11 +2,11 @@
 
 import { usePathname } from "next/navigation"
 import { AnimatePresence } from "framer-motion"
-import { Home, User, BarChart, FileText, CreditCard } from "lucide-react"
+import { Home, MapPin } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeToggle } from "@/components/ui/theme/theme-toggle"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { NavLogo } from "./navbar/NavLogo"
 import { DesktopNav } from "./navbar/DesktopNav"
@@ -15,12 +15,10 @@ import { MobileSidebar } from "./navbar/MobileSidebar"
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/charts", label: "Charts", icon: BarChart },
-  { href: "/forms", label: "Forms", icon: FileText },
-  //@@STRIPE_NAV_ITEM@@
+  { href: "/saved-trips", label: "Saved Trips", icon: MapPin },
 ]
 
-const desktopNavItems = [...navItems, { href: "/user", label: "Profile", icon: User }]
+const desktopNavItems = [...navItems]
 
 export function Navbar() {
   const pathname = usePathname()

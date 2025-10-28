@@ -13,6 +13,10 @@ OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/generat
 # RapidAPI configuration
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 
+# Eventbrite API configuration
+EVENTBRITE_API_KEY = os.getenv("EVENTBRITE_API_KEY")
+EVENTBRITE_API_URL = "https://www.eventbriteapi.com/v3"
+
 # Open-Meteo API endpoint
 OPEN_METEO_API = "https://api.open-meteo.com/v1/forecast"
 
