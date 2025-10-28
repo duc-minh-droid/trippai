@@ -22,7 +22,7 @@ import {
   Users,
   Star
 } from "lucide-react"
-import { savedTripsStorage, type SavedTrip } from "@/lib/saved-trips"
+import { savedTripsStorage, type SavedTrip } from "../../lib/saved-trips"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Input } from "@/components/ui/input"

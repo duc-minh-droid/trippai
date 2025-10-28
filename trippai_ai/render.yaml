@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: trippai-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: RAPIDAPI_KEY
+        sync: false
+      - key: EVENTBRITE_API_KEY
+        sync: false
+      - key: OLLAMA_MODEL
+        value: llama3:latest
+      - key: OLLAMA_API_URL
+        value: http://localhost:11434/api/generate

@@ -6,5 +6,6 @@ scipy
 python-dotenv
 prophet
 fastapi
-uvicorn
+uvicorn[standard]
 pydantic
+httpx

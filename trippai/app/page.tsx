@@ -16,6 +16,9 @@ import { Plus, MapPin, Route, ChevronDown, ChevronUp, Settings, Plane } from "lu
 import { AnimatePresence, motion } from "framer-motion"
 import "mapbox-gl/dist/mapbox-gl.css"
 
+// API URL from environment variable
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
 export default function Home() {
   const mapRef = useRef<MapRef>(null)
   
@@ -218,7 +221,7 @@ export default function Home() {
     try {
       if (isMultiCity) {
         // Multi-city API call
-        const response = await fetch("http://localhost:8000/api/multi-city/plan", {
+        const response = await fetch(`${API_URL}/api/multi-city/plan`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -251,7 +254,7 @@ export default function Home() {
         setResult(data)
       } else {
         // Single city API call
-        const response = await fetch("http://localhost:8000/api/predict", {
+        const response = await fetch(`${API_URL}/api/predict`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

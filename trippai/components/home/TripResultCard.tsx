@@ -30,7 +30,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { PriceBreakdown } from "@/components/multi-city/PriceBreakdown"
-import { savedTripsStorage } from "@/lib/saved-trips"
+import { savedTripsStorage } from "../../lib/saved-trips"
 import { toast } from "sonner"
 
 interface TripResult {
