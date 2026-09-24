@@ -1,10 +1,10 @@
-import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import type { Metadata, Viewport } from "next"
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google"
 import "./globals.css"
 
 import { ThemeProvider } from "@/components/ui/theme/theme-provider"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { SiteNav } from "@/components/site/SiteNav"
+import { SiteFooter } from "@/components/site/SiteFooter"
 import { Toaster } from "@/components/ui/sonner"
 
 const geistSans = Geist({
@@ -17,10 +17,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
+const display = Instrument_Serif({
+  variable: "--font-display",
+  weight: "400",
+  subsets: ["latin"],
+})
+
 export const metadata: Metadata = {
-  title: "UI Components - Modern React Components",
+  title: "TrippAI · Find the best week to travel",
   description:
-    "A showcase of modern, reusable UI components built with Next.js, shadcn/ui, and Tailwind CSS",
+    "TrippAI forecasts weather, crowds and prices for the year ahead and tells you the best week to visit a city.",
+}
+
+export const viewport: Viewport = {
+  themeColor: "#070a17",
 }
 
 export default function RootLayout({
@@ -29,26 +39,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background font-sans`}
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-        {/* <AuthProvider> */}
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${display.variable} min-h-screen bg-[#070a17] font-sans text-slate-100 antialiased`}>
+        <ThemeProvider attribute="class" forcedTheme="dark" disableTransitionOnChange>
           <div className="relative flex min-h-screen flex-col">
-            <Navbar />
+            <SiteNav />
             <main id="main-content" className="flex-1">
               {children}
             </main>
-            <Footer />
+            <SiteFooter />
           </div>
           <Toaster />
-        {/* </AuthProvider> */}
         </ThemeProvider>
       </body>
     </html>

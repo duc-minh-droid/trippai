@@ -1,32 +1,29 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
+
+// NEXT_PUBLIC_DEMO_MODE=true produces a fully static export in `out/` that reads
+// pre-computed forecasts from public/demo/ instead of calling the API.
+const isStatic = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
 
 const nextConfig: NextConfig = {
   eslint: {
     // Allows production builds to complete even with ESLint errors
     ignoreDuringBuilds: true,
   },
-  typescript: {
-    // ⚠️ Allows production builds to complete even with TypeScript errors
-    ignoreBuildErrors: true,
-  },
-  async headers() {
-    return [
-      {
-        // Apply these headers to all routes
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups',
-          },
-          {
-            key: 'Cross-Origin-Embedder-Policy',
-            value: 'unsafe-none',
-          },
-        ],
-      },
-    ];
-  },
-};
+  ...(isStatic
+    ? { output: "export" as const, images: { unoptimized: true } }
+    : {
+        async headers() {
+          return [
+            {
+              source: "/:path*",
+              headers: [
+                { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+                { key: "Cross-Origin-Embedder-Policy", value: "unsafe-none" },
+              ],
+            },
+          ]
+        },
+      }),
+}
 
-export default nextConfig;
+export default nextConfig
