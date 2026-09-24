@@ -6,7 +6,7 @@ from typing import Dict, Optional
 
 from services.forecast_service import ForecastService
 from services.travel_tip_service import TravelTipService
-from utils.city_lookup import lookup_city_coordinates
+from utils.city_lookup import lookup_city_coordinates, estimate_base_price
 from utils.ai_generator import check_ollama_available, generate_ai_explanation
 from utils.score_calculator import calculate_confidence, validate_predictions
 from utils.output_formatter import (
@@ -84,7 +84,8 @@ class TripTimeAI:
         forecast_weeks: int = 52,
         max_budget: Optional[float] = None,
         save_output: bool = True,
-        output_dir: str = "models"
+        output_dir: str = "models",
+        origin_city: str = "London"
     ) -> Dict:
         """
         Predict the best time to travel to the destination.
@@ -118,7 +119,10 @@ class TripTimeAI:
             historical_end=end_date_dt,
             forecast_weeks=forecast_weeks,
             trip_days=trip_days,
-            max_budget=max_budget
+            max_budget=max_budget,
+            lat=self.lat,
+            lon=self.lon,
+            base_price=estimate_base_price(origin_city, self.lat, self.lon)
         )
         
         # Handle errors (e.g., no periods within budget)
@@ -157,6 +161,7 @@ class TripTimeAI:
         )
         
         # Structure output
+        weekly = self._weekly_series(predictions_df)
         output = self._structure_output(
             validated_window,
             trip_start,
@@ -167,6 +172,8 @@ class TripTimeAI:
             trip_days
         )
         
+        output["weekly"] = weekly
+
         # Save and print results
         if save_output:
             save_prediction_output(output, self.destination, output_dir)
@@ -175,6 +182,30 @@ class TripTimeAI:
         
         return output
     
+    @staticmethod
+    def _weekly_series(predictions_df: pd.DataFrame) -> list:
+        """
+        Flatten the scored forecast into a date-ordered list of weeks so the
+        frontend can draw the year-ahead heatmap and charts.
+        """
+        if predictions_df is None or predictions_df.empty:
+            return []
+        df = predictions_df.sort_values("date")
+        rows = []
+        for _, r in df.iterrows():
+            rows.append({
+                "date": pd.to_datetime(r["date"]).strftime("%Y-%m-%d"),
+                "price": round(float(r["price_hat"]), 2),
+                "temp": round(float(r["temp_hat"]), 1),
+                "precip": round(float(r["precip_hat"]), 1),
+                "crowd": round(float(r["crowd_hat"]), 1),
+                "travel_score": round(float(r["travel_score"]), 1),
+                "price_score": round(float(r["price_score"]), 1),
+                "weather_score": round(float(r["weather_score"]), 1),
+                "crowd_score": round(float(r["crowd_score"]), 1),
+            })
+        return rows
+
     def _parse_dates(
         self,
         start_date: Optional[str],

@@ -36,6 +36,12 @@ class WeatherService:
         dest_lower = destination.lower()
         if dest_lower in coordinates:
             return coordinates[dest_lower]
+        try:
+            from utils.city_lookup import lookup_city_coordinates
+            c = lookup_city_coordinates(destination)
+            return c["lat"], c["lon"]
+        except ValueError:
+            pass
         
         # Default to Paris if destination not found
         print(f"Warning: Coordinates for '{destination}' not found. Using Paris as default.")
@@ -424,12 +430,15 @@ class WeatherService:
         self, 
         destination: str, 
         start_date: datetime, 
-        end_date: datetime
+        end_date: datetime,
+        lat: float = None,
+        lon: float = None
     ) -> pd.DataFrame:
         """
         Get weather data and comfort scores for a destination.
         """
-        lat, lon = self.get_coordinates(destination)
+        if lat is None or lon is None:
+            lat, lon = self.get_coordinates(destination)
         weather_df = self.fetch_weather_data(lat, lon, start_date, end_date)
         
         if weather_df.empty:

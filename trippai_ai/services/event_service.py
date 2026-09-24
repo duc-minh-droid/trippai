@@ -233,6 +233,14 @@ class EventService:
         
         return suggestions
     
+    @staticmethod
+    def _shift_year(date_str: str, year: int) -> str:
+        """Return date_str (YYYY-MM-DD) with its year replaced."""
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d").replace(year=year).strftime("%Y-%m-%d")
+        except ValueError:
+            return date_str
+
     def _get_mock_events(
         self,
         city: str,
@@ -700,11 +708,13 @@ class EventService:
             relevant_events = []
             for event in city_events:
                 if start.month in event.get("months", []):
+                    # The mock calendar is written for one year; move recurring
+                    # events into the year the trip actually happens.
                     relevant_events.append({
                         "name": event["name"],
                         "description": event["description"],
-                        "start_date": event["start_date"],
-                        "end_date": event["end_date"],
+                        "start_date": self._shift_year(event["start_date"], start.year),
+                        "end_date": self._shift_year(event["end_date"], start.year),
                         "category": event["category"],
                         "url": event["url"],
                         "is_free": event["is_free"],

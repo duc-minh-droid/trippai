@@ -11,6 +11,15 @@ import os
 import logging
 import json
 import asyncio
+import sys
+
+# The services print emoji status lines; on Windows consoles (cp1252) that raises
+# UnicodeEncodeError and turns every prediction into a 500. Force UTF-8 output.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
 from models.trip_time_ai import TripTimeAI
 from services.booking_service import BookingService
@@ -123,6 +132,7 @@ class TravelPredictionResponse(BaseModel):
     events: Optional[List[Dict[str, Any]]] = Field(default=None, description="Major events happening during trip")
     event_warning: Optional[str] = Field(default=None, description="Warning about events affecting prices/crowds")
     event_suggestions: Optional[List[str]] = Field(default=None, description="Suggested events to attend")
+    weekly: Optional[List[Dict[str, Any]]] = Field(default=None, description="Scored week-by-week forecast (date, price, temp, precip, crowd, scores)")
 
 
 @app.get("/")
@@ -216,7 +226,8 @@ async def predict_best_travel_time(request: TravelPredictionRequest):
             trip_days=request.trip_days,
             forecast_weeks=request.forecast_weeks,
             max_budget=request.max_budget,
-            save_output=False  # Don't save output for API calls
+            save_output=False,  # Don't save output for API calls
+            origin_city=request.origin_city or "London"
         )
         
         # Add data source info

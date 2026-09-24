@@ -33,7 +33,10 @@ class ForecastService:
         self,
         destination: str,
         start_date: datetime,
-        end_date: datetime
+        end_date: datetime,
+        lat: Optional[float] = None,
+        lon: Optional[float] = None,
+        base_price: float = 300
     ) -> pd.DataFrame:
         """
         Fetch and merge all data sources, then aggregate weekly.
@@ -51,12 +54,16 @@ class ForecastService:
         # Fetch weather data
         print("Fetching weather data...")
         weather_df = self.weather_service.get_weather_for_destination(
-            destination, start_date, end_date
+            destination, start_date, end_date, lat=lat, lon=lon
         )
         
         # Generate price data
         print("Generating price data...")
-        price_df = self.price_service.generate_price_data(start_date, end_date)
+        price_df = self.price_service.generate_price_data(
+            start_date, end_date,
+            base_price=base_price,
+            seasonal_amplitude=base_price / 6,
+        )
         
         # Fetch crowd data
         print("Fetching crowd data...")
@@ -87,6 +94,16 @@ class ForecastService:
         print(f"  - Weather data: {len(weather_df)} days")
         print(f"  - Crowd data: {len(crowd_df)} days")
         
+        # Normalise every source to midnight dates. The synthetic price series is
+        # built from datetime.now() and carries a time-of-day component, which made
+        # the date join miss every row and silently replaced real weather and crowd
+        # data with the 20 C / 50 crowd defaults.
+        price_df = price_df.assign(date=pd.to_datetime(price_df["date"]).dt.normalize())
+        if not weather_df.empty and "date" in weather_df.columns:
+            weather_df = weather_df.assign(date=pd.to_datetime(weather_df["date"]).dt.normalize())
+        if not crowd_df.empty and "date" in crowd_df.columns:
+            crowd_df = crowd_df.assign(date=pd.to_datetime(crowd_df["date"]).dt.normalize())
+
         # Start with price data (has consistent daily range)
         df_all = price_df[["date", "avg_price"]].copy()
         
@@ -223,6 +240,7 @@ class ForecastService:
             columns={"date": "ds", "avg_price": "y"}
         )
         model_price = Prophet(
+            growth="flat",  # one year of history: a linear trend just drifts
             yearly_seasonality=True,
             weekly_seasonality=False,
             daily_seasonality=False,
@@ -239,6 +257,7 @@ class ForecastService:
             columns={"date": "ds", "temp_avg": "y"}
         )
         model_temp = Prophet(
+            growth="flat",  # one year of history: a linear trend just drifts
             yearly_seasonality=True,
             weekly_seasonality=False,
             daily_seasonality=False
@@ -254,6 +273,7 @@ class ForecastService:
             columns={"date": "ds", "precipitation": "y"}
         )
         model_precip = Prophet(
+            growth="flat",  # one year of history: a linear trend just drifts
             yearly_seasonality=True,
             weekly_seasonality=False,
             daily_seasonality=False
@@ -269,6 +289,7 @@ class ForecastService:
             columns={"date": "ds", "crowd_index": "y"}
         )
         model_crowd = Prophet(
+            growth="flat",  # one year of history: a linear trend just drifts
             yearly_seasonality=True,
             weekly_seasonality=False,
             daily_seasonality=False
@@ -415,7 +436,8 @@ class ForecastService:
         # Normalize precipitation impact
         if df["precip_hat"].max() > 0:
             precip_normalized = df["precip_hat"] / df["precip_hat"].max()
-            df["precip_penalty"] = (1 - precip_normalized) * 20  # Up to 20 point penalty
+            # Wettest week loses 20 points, driest week loses nothing
+            df["precip_penalty"] = precip_normalized * 20
         else:
             df["precip_penalty"] = 0
         
@@ -562,7 +584,10 @@ class ForecastService:
         historical_end: datetime,
         forecast_weeks: int = 52,
         trip_days: int = 7,
-        max_budget: Optional[float] = None
+        max_budget: Optional[float] = None,
+        lat: Optional[float] = None,
+        lon: Optional[float] = None,
+        base_price: float = 300
     ) -> Tuple[pd.DataFrame, dict]:
         """
         Full pipeline: prepare data, train models, forecast, score, and find best window.
@@ -583,7 +608,10 @@ class ForecastService:
         print("=" * 80)
         
         # Step 1: Prepare data
-        df_weekly = self.prepare_data(destination, historical_start, historical_end)
+        df_weekly = self.prepare_data(
+            destination, historical_start, historical_end,
+            lat=lat, lon=lon, base_price=base_price
+        )
         
         # Step 2: Train models and forecast
         forecast_df, models = self.train_forecast_models(df_weekly, forecast_weeks)
