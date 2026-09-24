@@ -1,0 +1,46 @@
+{
+ "origin": "London",
+ "generated_at": "2026-09-24T01:21:30.390235",
+ "destinations": [
+  {
+   "name": "Barcelona",
+   "slug": "barcelona",
+   "travel_score": 96.67
+  },
+  {
+   "name": "Tokyo",
+   "slug": "tokyo",
+   "travel_score": 86.41
+  },
+  {
+   "name": "Lisbon",
+   "slug": "lisbon",
+   "travel_score": 98.68
+  },
+  {
+   "name": "New York",
+   "slug": "new-york",
+   "travel_score": 89.51
+  },
+  {
+   "name": "Rome",
+   "slug": "rome",
+   "travel_score": 89.42
+  },
+  {
+   "name": "Bangkok",
+   "slug": "bangkok",
+   "travel_score": 83.49
+  },
+  {
+   "name": "Paris",
+   "slug": "paris",
+   "travel_score": 88.15
+  },
+  {
+   "name": "Sydney",
+   "slug": "sydney",
+   "travel_score": 97.72
+  }
+ ]
+}

@@ -1,0 +1,239 @@
+{
+ "origin_city": "London",
+ "cities": [
+  "Paris",
+  "Barcelona",
+  "Rome"
+ ],
+ "total_days": 12,
+ "start_date": "2027-09-26",
+ "end_date": "2027-10-08",
+ "route_optimized": true,
+ "route_info": {
+  "order": [
+   "Paris",
+   "Barcelona",
+   "Rome"
+  ],
+  "was_optimized": true,
+  "optimization_method": "exhaustive",
+  "segments": [
+   {
+    "from": "Paris",
+    "to": "Barcelona",
+    "distance_km": 830.7
+   },
+   {
+    "from": "Barcelona",
+    "to": "Rome",
+    "distance_km": 859.6
+   }
+  ]
+ },
+ "total_distance_km": 3467.6,
+ "itinerary": [
+  {
+   "city": "Paris",
+   "order": 1,
+   "start_date": "2027-09-26",
+   "end_date": "2027-10-01",
+   "days": 5,
+   "coordinates": {
+    "lat": 48.8566,
+    "lon": 2.3522
+   },
+   "predicted_weather": {
+    "temperature": 21.7,
+    "precipitation": 21.2
+   },
+   "predicted_price": 175.03,
+   "predicted_crowd": 25.2,
+   "travel_score": 88.15,
+   "confidence": 0.84,
+   "scores": {
+    "price_score": 85.5,
+    "weather_score": 87.0,
+    "crowd_score": 92.8
+   },
+   "ai_explanation": "August offers excellent value for Paris — flight prices around $175.0, comfortable temperatures near 21.7°C, and light tourist crowds. This week provides an optimal balance across all factors.",
+   "ai_travel_tip": "Enjoy Paris's summer activities in August. Pack light layers for comfortable, mild weather, and don't forget an umbrella or rain jacket.",
+   "from_city": "London",
+   "events": [
+    {
+     "name": "Paris Fashion Week",
+     "description": "The world's premier fashion event showcasing the latest collections from top designers. A must-see for fashion enthusiasts from around the globe.",
+     "start_date": "2027-03-01",
+     "end_date": "2027-03-09",
+     "category": "Fashion",
+     "url": "https://fhcm.paris/en/",
+     "is_free": false,
+     "venue": "Various venues, Paris"
+    }
+   ],
+   "event_warning": "Your trip overlaps with Paris Fashion Week — expect higher hotel prices and larger crowds.",
+   "event_suggestions": [
+    "Check out Paris Fashion Week (Fashion event)"
+   ],
+   "has_major_events": true
+  },
+  {
+   "city": "Barcelona",
+   "order": 2,
+   "start_date": "2027-10-01",
+   "end_date": "2027-10-05",
+   "days": 4,
+   "coordinates": {
+    "lat": 41.3874,
+    "lon": 2.1686
+   },
+   "predicted_weather": {
+    "temperature": 21.9,
+    "precipitation": 18.0
+   },
+   "predicted_price": 196.89,
+   "predicted_crowd": 28.5,
+   "travel_score": 91.37,
+   "confidence": 0.85,
+   "scores": {
+    "price_score": 97.6,
+    "weather_score": 92.1,
+    "crowd_score": 82.3
+   },
+   "ai_explanation": "September offers excellent value for Barcelona — flight prices around $197.0, comfortable temperatures near 21.9°C, and light tourist crowds. This week provides an optimal balance across all factors.",
+   "ai_travel_tip": "Experience Barcelona's autumn colors in September. Pack light layers for comfortable, mild weather, and don't forget an umbrella or rain jacket.",
+   "from_city": "Paris",
+   "events": [
+    {
+     "name": "Primavera Sound Festival",
+     "description": "One of Europe's largest music festivals featuring top international acts across multiple stages.",
+     "start_date": "2026-05-28",
+     "end_date": "2026-06-01",
+     "category": "Music Festival",
+     "url": "https://www.primaverasound.com/",
+     "is_free": false,
+     "venue": "Parc del Fòrum, Barcelona"
+    },
+    {
+     "name": "La Mercè Festival",
+     "description": "Barcelona's biggest street festival with parades, concerts, fireworks, and the famous human towers (castells).",
+     "start_date": "2026-09-24",
+     "end_date": "2026-09-27",
+     "category": "Festival",
+     "url": "https://www.barcelona.cat/lamerce/",
+     "is_free": true,
+     "venue": "Citywide, Barcelona"
+    }
+   ],
+   "event_warning": "No major events during your exact dates, but Barcelona hosts great events throughout the year!",
+   "event_suggestions": [
+    "Consider attending Primavera Sound Festival",
+    "Consider attending La Mercè Festival"
+   ],
+   "has_major_events": false
+  },
+  {
+   "city": "Rome",
+   "order": 3,
+   "start_date": "2027-10-05",
+   "end_date": "2027-10-08",
+   "days": 3,
+   "coordinates": {
+    "lat": 41.9028,
+    "lon": 12.4964
+   },
+   "predicted_weather": {
+    "temperature": 22.4,
+    "precipitation": 19.0
+   },
+   "predicted_price": 211.17,
+   "predicted_crowd": 20.7,
+   "travel_score": 94.79,
+   "confidence": 0.86,
+   "scores": {
+    "price_score": 94.0,
+    "weather_score": 91.7,
+    "crowd_score": 99.0
+   },
+   "ai_explanation": "September offers excellent value for Rome — flight prices around $211.0, comfortable temperatures near 22.4°C, and light tourist crowds. This week provides an optimal balance across all factors.",
+   "ai_travel_tip": "Experience Rome's autumn colors in September. Pack light layers for comfortable, mild weather, and don't forget an umbrella or rain jacket.",
+   "from_city": "Barcelona",
+   "events": [
+    {
+     "name": "Rome Marathon",
+     "description": "Run through 2,000 years of history past iconic landmarks like the Colosseum and Vatican.",
+     "start_date": "2026-03-22",
+     "end_date": "2026-03-22",
+     "category": "Sports Event",
+     "url": "https://www.maratonadiroma.it/",
+     "is_free": true,
+     "venue": "Rome city streets"
+    },
+    {
+     "name": "Easter Week Celebrations",
+     "description": "Special masses and ceremonies at the Vatican, including the Pope's Easter Sunday address.",
+     "start_date": "2026-04-05",
+     "end_date": "2026-04-12",
+     "category": "Religious Festival",
+     "url": "https://www.vatican.va/",
+     "is_free": true,
+     "venue": "Vatican City & Rome"
+    }
+   ],
+   "event_warning": "No major events during your exact dates, but Rome hosts great events throughout the year!",
+   "event_suggestions": [
+    "Consider attending Rome Marathon",
+    "Consider attending Easter Week Celebrations"
+   ],
+   "has_major_events": false
+  }
+ ],
+ "cost_breakdown": {
+  "total_hotel": 583.09,
+  "total_flights": 468.6,
+  "total_cost": 1051.69,
+  "per_person": 525.85,
+  "breakdown": {
+   "Paris accommodation": 175.03,
+   "Flight Paris → Barcelona": 124.6,
+   "Barcelona accommodation": 196.89,
+   "Flight Barcelona → Rome": 128.93,
+   "Rome accommodation": 211.17,
+   "Flight Rome → London": 215.07
+  },
+  "flights": [
+   {
+    "from": "Paris",
+    "to": "Barcelona",
+    "distance_km": 830.7,
+    "cost": 124.6
+   },
+   {
+    "from": "Barcelona",
+    "to": "Rome",
+    "distance_km": 859.6,
+    "cost": 128.93
+   },
+   {
+    "from": "Rome",
+    "to": "London",
+    "distance_km": 1433.8,
+    "cost": 215.07
+   }
+  ]
+ },
+ "overall_score": {
+  "overall": 90.88,
+  "average": 91.44,
+  "min": 88.15,
+  "max": 94.79
+ },
+ "summary": "Multi-city trip visiting 3 cities over 12 days.\nRoute: London → Paris → Barcelona → Rome → London\nOverall trip score: 90.88/100\nEstimated total cost: $1,051.69 ($525.85 per person)",
+ "metadata": {
+  "forecast_weeks": 52,
+  "optimization_enabled": true,
+  "number_of_cities": 3,
+  "generated_at": "2026-09-24T01:21:30.388142"
+ },
+ "generated_at": "2026-09-24T01:21:30.388142",
+ "data_source": "demo_snapshot"
+}
